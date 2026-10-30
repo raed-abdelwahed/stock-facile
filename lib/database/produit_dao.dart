@@ -41,4 +41,42 @@ class ProduitDao {
     );
     return lignes.isEmpty ? null : Produit.fromMap(lignes.first);
   }
+
+  // ---------------------------------------------------------------------------
+  // UPDATE – Q6.11
+  // ---------------------------------------------------------------------------
+  /// Modifie toutes les colonnes du produit dont l'id est produit.id.
+  /// Renvoie le nombre de lignes modifiées (1, ou 0 si l'id n'existe pas).
+  Future<int> modifierProduit(Produit produit) async {
+    final db = await DatabaseHelper().database;
+    return db.update(
+      table,
+      produit.toMap(),
+      where: 'id = ?', // sans WHERE, TOUS les produits seraient modifiés !
+      whereArgs: [produit.id],
+    );
+  }
+
+  // UPDATE partiel – Q6.15 : une seule colonne
+  Future<int> changerDisponibilite(int id, bool disponible) async {
+    final db = await DatabaseHelper().database;
+    return db.update(
+      table,
+      {'disponible': disponible ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // UPDATE partiel – Q6.15 : le calcul est fait par SQLite
+  /// Ajoute delta (positif ou négatif) à la quantité, sans jamais passer
+  /// sous 0. Renvoie 1 si la modification a eu lieu, 0 sinon.
+  Future<int> ajusterQuantite(int id, int delta) async {
+    final db = await DatabaseHelper().database;
+    return db.rawUpdate(
+      'UPDATE produits SET quantite = quantite + ? '
+      'WHERE id = ? AND quantite + ? >= 0',
+      [delta, id, delta],
+    );
+  }
 }

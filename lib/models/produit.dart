@@ -45,6 +45,29 @@ class Produit {
     };
   }
 
+  // Copie modifiée – Q6.10
+  // Tous les champs sont final : on ne peut pas modifier un Produit,
+  // on en crée une copie en remplaçant seulement les champs fournis.
+  Produit copyWith({
+    int? id,
+    String? nom,
+    double? prix,
+    int? quantite,
+    bool? disponible,
+    DateTime? dateAjout,
+    int? categorieId,
+  }) {
+    return Produit(
+      id: id ?? this.id,
+      nom: nom ?? this.nom,
+      prix: prix ?? this.prix,
+      quantite: quantite ?? this.quantite,
+      disponible: disponible ?? this.disponible,
+      dateAjout: dateAjout ?? this.dateAjout,
+      categorieId: categorieId ?? this.categorieId,
+    );
+  }
+
   @override
   String toString() =>
       'Produit(id: $id, nom: $nom, prix: ${prix.toStringAsFixed(3)} DT, '

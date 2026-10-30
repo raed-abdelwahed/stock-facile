@@ -156,3 +156,32 @@ En desktop (Windows), DB Browser ouvre directement le vrai fichier : après « �
 - Les données affichées sont toujours **à jour** : si le produit a été modifié entre-temps (quantité, prix…), l'écran de détail lit la dernière version dans la base, et non un objet ancien gardé en mémoire.
 - On passe une valeur simple (un entier) au lieu d'un objet entier.
 - C'est indispensable en partie 06 : après une modification depuis le détail, il suffit de relire la base par l'`id` pour réafficher le produit à jour.
+
+## Partie 06 – Formulaire et opération 3 : modifier des données (Update)
+
+### Q6.2 – Pourquoi libérer les contrôleurs dans `dispose()` ?
+Un `TextEditingController` garde des ressources en mémoire et une liste d'« écouteurs » (les widgets qui l'observent). Si on ne l'appelle pas `dispose()`, ces ressources restent en mémoire après la fermeture de l'écran : c'est une **fuite de mémoire**. À chaque ouverture du formulaire, de nouveaux contrôleurs seraient créés sans que les anciens soient libérés. `dispose()` est appelé automatiquement quand l'écran est détruit : c'est le bon endroit pour les libérer.
+
+### Q6.9 – `UPDATE` avec et sans `WHERE`
+- `UPDATE produits SET prix = 19.000 WHERE id = 1;` modifie **1 seule ligne** : l'huile d'olive passe à 19,000 DT.
+- `UPDATE produits SET prix = 1;` **sans `WHERE`** modifie **toutes les lignes** (6 produits) : tous les produits passent à 1 DT.
+- Après « Annuler les modifications », la base revient à l'état enregistré.
+**Leçon à retenir :** un `UPDATE` (ou un `DELETE`) **sans `WHERE` s'applique à toute la table**. Il faut toujours vérifier la clause `WHERE` avant d'exécuter, et la tester d'abord avec un `SELECT … WHERE …` pour voir quelles lignes seront touchées. Dans le code, `db.update` est toujours appelé avec `where: 'id = ?'`.
+
+### Q6.10 – Pourquoi `copyWith()` alors que tous les champs sont `final` ?
+Les champs `final` ne peuvent pas être modifiés après la création de l'objet (`produit.prix = 20` est interdit). Pour changer une valeur, il faut **créer un nouvel objet**. `copyWith()` le fait simplement : il recopie tous les champs du produit d'origine et ne remplace que ceux qu'on lui donne (`p.copyWith(prix: 20)`). On garde ainsi l'`id` et la `dateAjout` d'origine sans avoir à tout réécrire, et on évite les oublis.
+
+### Q6.12 – Valeur retournée par `modifierProduit`
+`db.update` renvoie le **nombre de lignes modifiées** :
+- pour le produit 1 (qui existe) : **1** ;
+- pour un `id` qui n'existe pas (999) : **0**, car aucune ligne ne correspond au `WHERE id = ?`. Aucune erreur n'est levée.
+
+### Q6.16 – Boutons − / +
+- Quand on clique sur « − » alors que la quantité vaut 0, `ajusterQuantite` retourne **0** : la condition `quantite + ? >= 0` est fausse, donc aucune ligne n'est modifiée. L'écran affiche « La quantité ne peut pas être négative ».
+- Faire le calcul **dans SQLite** (`quantite = quantite + ?`) est plus sûr que « lire en Dart → ajouter → enregistrer » :
+  - l'opération est faite en **une seule requête**, sur la valeur réellement présente dans la base à ce moment-là ;
+  - si deux modifications arrivent presque en même temps (double clic, deux écrans), la méthode « lire puis écrire » peut **perdre une modification** (les deux lisent 5, les deux écrivent 6 au lieu de 7) ;
+  - la condition `quantite + ? >= 0` empêche directement une quantité négative, en plus de la contrainte `CHECK`.
+
+### Q6.17 – Quantité à 0 → produit indisponible
+Dans `ProduitDetailScreen._ajuster()`, après un `ajusterQuantite` réussi, si la nouvelle quantité vaut 0, on appelle `changerDisponibilite(id, false)`. Le produit passe alors à `disponible = 0` dans la base (vérifiable dans la liste : icône rouge et rond rouge).

@@ -4,6 +4,7 @@ import '../database/produit_dao.dart';
 import '../models/produit.dart';
 import '../widgets/produit_tile.dart';
 import 'produit_detail_screen.dart';
+import 'produit_form_screen.dart';
 
 /// Liste des produits lue dans la base (Q5.6 à Q5.8, Q5.12).
 class ProduitsScreen extends StatefulWidget {
@@ -42,9 +43,29 @@ class _ProduitsScreenState extends State<ProduitsScreen> {
     if (modifie == true) _rafraichir();
   }
 
+  /// Q6.7 – Ouvre le formulaire d'ajout ; au retour, recharge la liste.
+  Future<void> _ajouterProduit() async {
+    final ajoute = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ProduitFormScreen()),
+    );
+    if (ajoute == true) {
+      _rafraichir();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Produit ajouté')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Nouveau produit',
+        onPressed: _ajouterProduit,
+        child: const Icon(Icons.add),
+      ),
       appBar: AppBar(
         title: const Text('Produits'),
         backgroundColor: Colors.teal,

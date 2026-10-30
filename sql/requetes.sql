@@ -111,3 +111,21 @@ ORDER BY nom ASC;
 -- Q5.1 – Le produit dont l'id vaut 3
 SELECT * FROM produits
 WHERE id = 3;
+
+-- -------------------------------------------------------------
+-- Partie 06 – Modification (Update)
+-- -------------------------------------------------------------
+
+-- Q6.9 – Modifier le prix du produit 1 seulement
+UPDATE produits SET prix = 19.000 WHERE id = 1;
+
+-- Q6.9 – ⚠️ SANS WHERE : TOUS les produits passent à 1 DT !
+-- (à exécuter puis « Annuler les modifications »)
+UPDATE produits SET prix = 1;
+
+-- Q6.15 – Ajuster la quantité sans passer sous 0 (calcul fait par SQLite)
+UPDATE produits SET quantite = quantite + -1
+WHERE id = 4 AND quantite + -1 >= 0;   -- 0 ligne modifiée : le jus est à 0
+
+-- Q6.17 – Rendre un produit indisponible
+UPDATE produits SET disponible = 0 WHERE id = 4;

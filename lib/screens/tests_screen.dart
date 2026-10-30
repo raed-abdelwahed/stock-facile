@@ -216,6 +216,36 @@ class TestsScreen extends StatelessWidget {
             icon: const Icon(Icons.list),
             label: const Text('Ouvrir la liste des produits'),
           ),
+
+          // ------------------------------------------------------------------
+          // Partie 06 – Update
+          // ------------------------------------------------------------------
+          const _Titre('Partie 06 – Modification'),
+
+          // Q6.12 – Produit 1 : prix + 1 DT avec copyWith puis modifierProduit
+          ElevatedButton(
+            onPressed: () async {
+              final dao = ProduitDao();
+              final p = await dao.lireProduitParId(1);
+              if (p == null) {
+                debugPrint('Le produit 1 n\'existe pas');
+                return;
+              }
+              final nouveau = p.copyWith(prix: p.prix + 1);
+              final lignes = await dao.modifierProduit(nouveau);
+              debugPrint('modifierProduit a retourné $lignes '
+                  '(prix ${p.prix} -> ${nouveau.prix})');
+
+              // Même test avec un id qui n'existe pas
+              final fantome = p.copyWith(id: 999);
+              final zero = await dao.modifierProduit(fantome);
+              debugPrint('modifierProduit(id 999) a retourné $zero');
+
+              if (!context.mounted) return;
+              _message(context, 'Produit 1 : ${nouveau.prix.toStringAsFixed(3)} DT ($lignes ligne modifiée)');
+            },
+            child: const Text('Test : produit 1, prix + 1 DT'),
+          ),
         ],
       ),
     );
