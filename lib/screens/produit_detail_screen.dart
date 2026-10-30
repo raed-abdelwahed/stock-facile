@@ -6,7 +6,31 @@ import '../models/categorie.dart';
 import '../models/produit.dart';
 import 'produit_form_screen.dart';
 
-/// Détail d'un produit (Q5.11, Q6.14, Q6.16, Q6.17).
+/// Boîte de confirmation « Supprimer ce produit ? » (Q7.3, réutilisée en Q7.4).
+/// Renvoie true si l'utilisateur confirme.
+Future<bool> confirmerSuppression(BuildContext context, String nom) async {
+  final reponse = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Supprimer ce produit ?'),
+      content: Text('« $nom » sera supprimé définitivement.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Supprimer'),
+        ),
+      ],
+    ),
+  );
+  return reponse ?? false;
+}
+
+/// Détail d'un produit (Q5.11, Q6.14, Q6.16, Q6.17, Q7.3).
 /// L'écran reçoit seulement l'id et relit le produit dans la base.
 class ProduitDetailScreen extends StatefulWidget {
   final int produitId;
@@ -90,6 +114,15 @@ class _ProduitDetailScreenState extends State<ProduitDetailScreen> {
     _recharger();
   }
 
+  // Q7.3 – supprimer après confirmation, puis revenir à la liste
+  Future<void> _supprimer(Produit produit) async {
+    final ok = await confirmerSuppression(context, produit.nom);
+    if (!ok) return;
+    await _dao.supprimerProduit(produit.id!);
+    if (!mounted) return;
+    Navigator.pop(context, true);
+  }
+
   @override
   Widget build(BuildContext context) {
     // En quittant l'écran, on renvoie _modifie à la liste (Q6.14).
@@ -144,6 +177,11 @@ class _ProduitDetailScreenState extends State<ProduitDetailScreen> {
                               tooltip: 'Modifier',
                               icon: const Icon(Icons.edit),
                               onPressed: () => _modifier(produit),
+                            ),
+                            IconButton(
+                              tooltip: 'Supprimer',
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _supprimer(produit),
                             ),
                           ],
                         ),

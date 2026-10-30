@@ -185,3 +185,40 @@ Les champs `final` ne peuvent pas être modifiés après la création de l'objet
 
 ### Q6.17 – Quantité à 0 → produit indisponible
 Dans `ProduitDetailScreen._ajuster()`, après un `ajusterQuantite` réussi, si la nouvelle quantité vaut 0, on appelle `changerDisponibilite(id, false)`. Le produit passe alors à `disponible = 0` dans la base (vérifiable dans la liste : icône rouge et rond rouge).
+
+## Partie 07 – Opération 4 : supprimer des données (Delete)
+
+### Q7.5 – Pourquoi retirer le produit de la liste **avant** la fin de l'appel à la base ?
+Quand l'animation de `Dismissible` se termine, Flutter reconstruit la liste **immédiatement**. Si le produit est encore dans la liste affichée (parce que la suppression dans la base, asynchrone, n'est pas terminée, ou parce que la liste n'a pas été mise à jour), le même `Dismissible` (même `key`) est recréé alors qu'il a déjà été « balayé ». Flutter lève alors l'erreur :
+`A dismissed Dismissible widget is still part of the tree. Make sure to implement the onDismissed handler and to immediately remove the Dismissible widget from the application once that handler has fired.`
+En faisant `snapshot.data!.removeAt(index)` (ici `produits.removeAt(index)`) **dans `onDismissed`, de façon synchrone**, la ligne disparaît tout de suite de l'écran ; la suppression dans la base se fait ensuite.
+
+### Q7.6 – Annuler une suppression : le produit retrouve son ancien `id`
+L'action « Annuler » du `SnackBar` appelle `insererProduit(produit)` avec l'objet supprimé. Cet objet contient encore son `id`, et `toMap()` ajoute la clé `'id'` quand elle n'est pas `null`. L'`INSERT` précise donc explicitement l'`id` : SQLite l'accepte, car cet `id` n'est plus utilisé depuis la suppression. Le produit est réinséré **à l'identique** (même `id`, même date d'ajout).
+(Sans `id` dans la `Map`, `AUTOINCREMENT` aurait donné un **nouveau** numéro, jamais l'ancien.)
+
+### Q7.8 – Suppression de catégories
+- Supprimer « Électroménager » (aucun produit) : **fonctionne**, la catégorie disparaît.
+- Supprimer « Alimentation » (qui contient des produits) : erreur
+  `DatabaseException(FOREIGN KEY constraint failed (code 787 SQLITE_CONSTRAINT_FOREIGNKEY))`.
+  La clé étrangère `ON DELETE RESTRICT` interdit la suppression. L'erreur est interceptée avec `on DatabaseException catch (e)` et l'écran affiche « Impossible : cette catégorie contient des produits ».
+
+### Q7.9 – Produits orphelins
+```sql
+SELECT p.*
+FROM produits p
+LEFT JOIN categories c ON c.id = p.categorie_id
+WHERE c.id IS NULL;
+```
+Le `LEFT JOIN` garde tous les produits, même ceux sans catégorie correspondante ; pour ceux-là, les colonnes de `c` valent `NULL`. Le `WHERE c.id IS NULL` ne garde donc que les produits **orphelins**. Résultat : **0 ligne**, grâce à la clé étrangère.
+Si la Q4.10 avait été faite **sans clé étrangère** (`PRAGMA foreign_keys` désactivé), le produit inséré avec `categorie_id = 99` serait resté dans la base : cette requête l'aurait retourné (testé : 1 ligne « orphelin »).
+
+### Question de réflexion – `RESTRICT`, `CASCADE`, `SET NULL`
+| Option | Effet quand on supprime une catégorie |
+|---|---|
+| `ON DELETE RESTRICT` | La suppression est **refusée** tant que des produits y sont rattachés. |
+| `ON DELETE CASCADE` | La catégorie **et tous ses produits** sont supprimés. |
+| `ON DELETE SET NULL` | La catégorie est supprimée et `categorie_id` des produits passe à `NULL` (produits « sans catégorie »). |
+
+Pour une épicerie, je choisirais **`RESTRICT`** : supprimer une catégorie ne doit jamais faire disparaître du stock par erreur (`CASCADE` est trop dangereux), et le gérant doit d'abord déplacer ou supprimer les produits volontairement.
+Pour utiliser `SET NULL`, il faudrait modifier la table `produits` : la colonne `categorie_id` est déclarée `NOT NULL`, ce qui est incompatible. Il faudrait la rendre **nullable** (`categorie_id INTEGER` sans `NOT NULL`) et écrire `ON DELETE SET NULL` ; en SQLite, cela oblige à recréer la table (créer une nouvelle table, copier les données, supprimer l'ancienne, renommer). Il faudrait aussi adapter le modèle Dart (`int? categorieId`).

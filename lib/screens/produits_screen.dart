@@ -43,6 +43,25 @@ class _ProduitsScreenState extends State<ProduitsScreen> {
     if (modifie == true) _rafraichir();
   }
 
+  /// Q7.4 / Q7.6 – Supprime dans la base, avec possibilité d'annuler.
+  Future<void> _supprimer(Produit produit) async {
+    await _dao.supprimerProduit(produit.id!);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('« ${produit.nom} » supprimé'),
+        action: SnackBarAction(
+          label: 'Annuler',
+          onPressed: () async {
+            // toMap() contient l'id : le produit retrouve son ancien id.
+            await _dao.insererProduit(produit);
+            _rafraichir();
+          },
+        ),
+      ),
+    );
+  }
+
   /// Q6.7 – Ouvre le formulaire d'ajout ; au retour, recharge la liste.
   Future<void> _ajouterProduit() async {
     final ajoute = await Navigator.push<bool>(
@@ -125,9 +144,28 @@ class _ProduitsScreenState extends State<ProduitsScreen> {
               itemCount: produits.length,
               itemBuilder: (context, index) {
                 final produit = produits[index];
-                return ProduitTile(
-                  produit: produit,
-                  onTap: () => _ouvrirDetail(produit),
+                // Q7.4 – glisser vers la gauche pour supprimer
+                return Dismissible(
+                  key: ValueKey(produit.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  confirmDismiss: (_) =>
+                      confirmerSuppression(context, produit.nom),
+                  onDismissed: (_) {
+                    // Q7.5 – d'abord retirer de la liste affichée…
+                    produits.removeAt(index);
+                    // … puis supprimer dans la base.
+                    _supprimer(produit);
+                  },
+                  child: ProduitTile(
+                    produit: produit,
+                    onTap: () => _ouvrirDetail(produit),
+                  ),
                 );
               },
             ),

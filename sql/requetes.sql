@@ -129,3 +129,16 @@ WHERE id = 4 AND quantite + -1 >= 0;   -- 0 ligne modifiée : le jus est à 0
 
 -- Q6.17 – Rendre un produit indisponible
 UPDATE produits SET disponible = 0 WHERE id = 4;
+
+-- -------------------------------------------------------------
+-- Partie 07 – Suppression (Delete)
+-- -------------------------------------------------------------
+
+-- Q7.1 – Supprimer le produit 6 (puis « Annuler les modifications »)
+DELETE FROM produits WHERE id = 6;
+
+-- Q7.9 – Produits orphelins (catégorie inexistante) : doit retourner 0 ligne
+SELECT p.*
+FROM produits p
+LEFT JOIN categories c ON c.id = p.categorie_id
+WHERE c.id IS NULL;

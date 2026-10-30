@@ -49,4 +49,14 @@ class CategorieDao {
     );
     return lignes.isEmpty ? null : Categorie.fromMap(lignes.first);
   }
+
+  // ---------------------------------------------------------------------------
+  // DELETE – Q7.8
+  // ---------------------------------------------------------------------------
+  /// Supprime une catégorie. Lève une DatabaseException (FOREIGN KEY) si des
+  /// produits y sont encore rattachés (ON DELETE RESTRICT).
+  Future<int> supprimerCategorie(int id) async {
+    final db = await DatabaseHelper().database;
+    return db.delete(table, where: 'id = ?', whereArgs: [id]);
+  }
 }

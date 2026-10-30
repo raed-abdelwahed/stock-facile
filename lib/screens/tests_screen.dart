@@ -6,6 +6,7 @@ import '../database/database_helper.dart';
 import '../database/produit_dao.dart';
 import '../models/categorie.dart';
 import '../models/produit.dart';
+import 'categories_screen.dart';
 import 'produits_screen.dart';
 
 /// Banc d'essai : un bouton par méthode à tester (parties 03 et 04).
@@ -245,6 +246,43 @@ class TestsScreen extends StatelessWidget {
               _message(context, 'Produit 1 : ${nouveau.prix.toStringAsFixed(3)} DT ($lignes ligne modifiée)');
             },
             child: const Text('Test : produit 1, prix + 1 DT'),
+          ),
+
+          // ------------------------------------------------------------------
+          // Partie 07 – Delete
+          // ------------------------------------------------------------------
+          const _Titre('Partie 07 – Suppression'),
+
+          // Q7.2 – Supprimer le dernier produit créé (id le plus grand)
+          ElevatedButton(
+            onPressed: () async {
+              final dao = ProduitDao();
+              final produits = await dao.lireProduits();
+              if (produits.isEmpty) {
+                debugPrint('Aucun produit à supprimer');
+                return;
+              }
+              produits.sort((a, b) => a.id!.compareTo(b.id!));
+              final dernier = produits.last;
+              final lignes = await dao.supprimerProduit(dernier.id!);
+              debugPrint('supprimerProduit(${dernier.id}) a retourné $lignes '
+                  '(${dernier.nom})');
+              if (!context.mounted) return;
+              _message(context, '« ${dernier.nom} » supprimé ($lignes ligne)');
+            },
+            child: const Text('Test : supprimer le dernier produit créé'),
+          ),
+
+          // Q7.7 – Ouvrir l'écran des catégories
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+              );
+            },
+            icon: const Icon(Icons.category),
+            label: const Text('Ouvrir les catégories'),
           ),
         ],
       ),

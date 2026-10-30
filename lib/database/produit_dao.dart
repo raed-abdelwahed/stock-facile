@@ -79,4 +79,17 @@ class ProduitDao {
       [delta, id, delta],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // DELETE – Q7.2
+  // ---------------------------------------------------------------------------
+  /// Supprime le produit d'id donné. Renvoie le nombre de lignes supprimées.
+  Future<int> supprimerProduit(int id) async {
+    final db = await DatabaseHelper().database;
+    return db.delete(
+      table,
+      where: 'id = ?', // sans WHERE, TOUS les produits seraient supprimés !
+      whereArgs: [id],
+    );
+  }
 }
