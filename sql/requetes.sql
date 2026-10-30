@@ -1,0 +1,1 @@
+-- Requêtes SQL du TP StockFacile (testées dans DB Browser)
