@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'screens/tests_screen.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -29,16 +31,8 @@ class StockFacileApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.teal,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('StockFacile'),
-          backgroundColor: Colors.teal,
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: Text('Bienvenue dans StockFacile'),
-        ),
-      ),
+      // Q3.4 – Le banc d'essai devient la page d'accueil (jusqu'à la partie 11).
+      home: const TestsScreen(),
     );
   }
 }

@@ -70,3 +70,23 @@ Les conversions faites :
 ### Questions de réflexion (Partie 02)
 - **Pourquoi un constructeur `factory` pour `fromMap` ?** Un constructeur `factory` peut exécuter du code avant de créer l'objet (lire la `Map`, convertir les types : `1/0` → `bool`, texte → `DateTime`) puis retourner l'objet construit avec le constructeur normal. Il donne aussi un nom clair à cette façon de construire l'objet (`Produit.fromMap(ligne)`).
 - **Pourquoi `(map['prix'] as num).toDouble()` et pas `map['prix'] as double` ?** SQLite peut renvoyer un nombre entier quand la valeur n'a pas de décimales : un prix de `5` revient en `int`, pas en `double`. `map['prix'] as double` provoquerait alors l'erreur `type 'int' is not a subtype of type 'double'`. `num` accepte les deux (`int` et `double`), et `.toDouble()` convertit dans tous les cas.
+
+## Partie 03 – Ouvrir et créer la base depuis Flutter
+
+### Q3.2 – Questions sur `DatabaseHelper`
+- **(1) Que se passe-t-il si on écrit deux fois `DatabaseHelper()` ?** Un seul objet est créé. Le constructeur `factory DatabaseHelper() => _instance;` ne construit rien : il renvoie toujours l'unique instance `_instance`, créée une seule fois avec le constructeur privé `_interne()`. Donc `DatabaseHelper() == DatabaseHelper()` est vrai partout. C'est le patron **singleton**, rendu possible par le mot-clé `factory` (un constructeur `factory` peut renvoyer un objet existant au lieu d'en créer un nouveau).
+- **(2) Que fait l'opérateur `??=` ?** `_db ??= await _ouvrirBase();` affecte une valeur à `_db` **seulement si `_db` est `null`**. Au premier appel, la base est ouverte et la connexion est gardée ; aux appels suivants, `_db` n'est plus `null`, donc on réutilise la même connexion sans rouvrir le fichier.
+- **(3) Pourquoi `PRAGMA foreign_keys = ON` est-il dans `onConfigure` et non dans `onCreate` ?** Le réglage `foreign_keys` n'est pas enregistré dans le fichier : il est perdu à chaque fermeture et doit être activé **à chaque ouverture**. `onConfigure` s'exécute à chaque ouverture, alors que `onCreate` ne s'exécute qu'une seule fois (à la création du fichier). Dans `onCreate`, les clés étrangères seraient actives au premier lancement seulement, puis désactivées à tous les lancements suivants.
+- **(4) Combien de fois `onCreate` est-il appelé ?** **Une seule fois** dans toute la vie de l'application : au tout premier lancement, quand le fichier `stock_facile.db` n'existe pas encore. Il sera rappelé seulement si on supprime le fichier (désinstallation ou réinitialisation de la base).
+
+### Q3.4 – Console au premier clic sur « Ouvrir la base »
+- Chemin de la base : affiché par `debugPrint('Base SQLite : …')`. Sous Windows (sqflite_common_ffi), le fichier est créé dans le dossier du projet : `…\stock_facile\.dart_tool\sqflite_common_ffi\databases\stock_facile.db`.
+- Messages : `onCreate : création des tables (version 1)` puis `Nombre de catégories : 4`.
+
+### Q3.5 – Après redémarrage, le message `onCreate` s'affiche-t-il encore ?
+Non. Au deuxième lancement, le fichier `stock_facile.db` existe déjà avec la version 1 enregistrée : sqflite ouvre simplement la base, sans rappeler `onCreate`. On voit seulement le chemin de la base et `Nombre de catégories : 4`.
+
+### Q3.7 – Vérification dans DB Browser
+- Onglet **Structure** : les tables `categories` et `produits` existent avec les mêmes colonnes que dans `brouillon.db`.
+- Onglet **Parcourir les données** : `categories` contient les 4 catégories de départ, `produits` est vide.
+- Onglet **Éditer les pragmas** : *User Version* = **1**. Cette valeur correspond à la ligne `static const int versionBase = 1;` de `database_helper.dart`, transmise à `openDatabase(version: versionBase)` : sqflite l'enregistre dans le fichier pour savoir s'il doit appeler `onCreate`, `onUpgrade` ou rien.
