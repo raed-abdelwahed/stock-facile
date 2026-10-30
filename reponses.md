@@ -130,3 +130,29 @@ Il faut quand même vérifier le prix dans le formulaire Flutter (partie 06) par
 - `ConflictAlgorithm.ignore` : si l'insertion viole une contrainte (`UNIQUE`, clé primaire…), la ligne est **simplement ignorée**, sans erreur ; `insert` renvoie alors 0 (aucune ligne insérée).
 - `ConflictAlgorithm.replace` : en cas de conflit, SQLite **supprime l'ancienne ligne** puis insère la nouvelle à sa place.
 - `replace` est dangereux sur une table référencée par une clé étrangère : remplacer une catégorie revient à la **supprimer** puis à la recréer. Avec `ON DELETE RESTRICT`, la suppression est refusée si des produits y sont rattachés (erreur) ; avec `ON DELETE CASCADE`, tous les produits de la catégorie seraient **supprimés** ; et la nouvelle ligne peut recevoir un nouvel `id`, ce qui casse les liens avec les produits.
+
+## Partie 05 – Opération 2 : lire et afficher les données (Read)
+
+### Q5.3 – Résultat brut de `db.query('produits')`
+- **a)** Le type exact est `List<Map<String, Object?>>` (une liste de `Map`, une `Map` par ligne). Une ligne ressemble à :
+  `{id: 1, nom: Stylo bleu, prix: 0.5, quantite: 100, disponible: 1, date_ajout: 2026-10-30T16:20:11.123, categorie_id: 4}`
+  On voit les valeurs **brutes** de SQLite : `disponible` vaut `1` (pas `true`) et la date est du texte.
+- **b)** `lignes.first['nom'] = 'Test';` provoque l'erreur `Unsupported operation: read-only` (*Cannot modify an unmodifiable map*). Les `Map` renvoyées par `sqflite` sont **en lecture seule** : on ne peut pas les modifier directement. Pour changer une valeur, on crée un objet Dart (`Produit.fromMap`), on fait une copie modifiée, puis on fait un `UPDATE` dans la base.
+- **c)** Avec `ProduitDao().lireProduits()`, chaque ligne est convertie en objet `Produit` : `disponible` devient un vrai `bool` et `dateAjout` un `DateTime`.
+
+### Q5.4 – `lireProduitParId(1)` et `lireProduitParId(999)`
+- `lireProduitParId(1)` renvoie le produit d'id 1 (le stylo).
+- `lireProduitParId(999)` renvoie **`null`** : aucune ligne n'a cet id.
+Le type de retour est `Produit?` (nullable) car la requête peut ne trouver **aucune** ligne. Avec `Produit`, on serait obligé d'inventer un produit ou de lever une exception ; `Produit?` oblige l'appelant à gérer le cas « introuvable ».
+
+### Q5.7 – `future: _dao.lireProduits()` directement dans le `FutureBuilder`
+La méthode `build()` est rappelée très souvent (rotation de l'écran, ouverture du clavier, `setState`, redimensionnement de la fenêtre…). Si l'appel est écrit dans `build()`, **une nouvelle requête SQL est lancée à chaque reconstruction** : le `debugPrint` de `lireProduits()` s'affiche plusieurs fois, l'écran repasse par l'état « chargement » et la base est interrogée pour rien. En lançant la requête **une seule fois dans `initState`** et en gardant le `Future` dans une variable (`_futurProduits`), on ne relit la base que quand on le décide (`_rafraichir()`).
+
+### Q5.9 – Modifier un prix dans DB Browser puis recharger
+Dans notre cas (application testée dans **Chrome**), cette manipulation n'est **pas possible** : la base est stockée dans le navigateur (IndexedDB), pas dans un fichier que DB Browser peut ouvrir. C'est la même situation qu'avec un émulateur Android : DB Browser ne travaille que sur une **copie** du fichier, donc une modification faite dans DB Browser ne change pas la base utilisée par l'application.
+En desktop (Windows), DB Browser ouvre directement le vrai fichier : après « Écrire les modifications » et un tirage de la liste vers le bas (`RefreshIndicator`), le nouveau prix apparaîtrait.
+
+### Q5.11 – Pourquoi passer l'`id` au détail et relire la base ?
+- Les données affichées sont toujours **à jour** : si le produit a été modifié entre-temps (quantité, prix…), l'écran de détail lit la dernière version dans la base, et non un objet ancien gardé en mémoire.
+- On passe une valeur simple (un entier) au lieu d'un objet entier.
+- C'est indispensable en partie 06 : après une modification depuis le détail, il suffit de relire la base par l'`id` pour réafficher le produit à jour.

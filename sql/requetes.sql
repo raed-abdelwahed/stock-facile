@@ -99,3 +99,15 @@ VALUES ('Électroménager', 'Petits appareils');
 -- Q4.6 – Insérer le produit « Stylo bleu » (Papeterie = catégorie 4)
 INSERT INTO produits (nom, prix, quantite, disponible, date_ajout, categorie_id)
 VALUES ('Stylo bleu', 0.500, 100, 1, '2026-10-30T10:00:00', 4);
+
+-- -------------------------------------------------------------
+-- Partie 05 – Lecture (Read)
+-- -------------------------------------------------------------
+
+-- Q5.1 – Tous les produits triés par nom
+SELECT * FROM produits
+ORDER BY nom ASC;
+
+-- Q5.1 – Le produit dont l'id vaut 3
+SELECT * FROM produits
+WHERE id = 3;

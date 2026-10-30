@@ -26,4 +26,27 @@ class CategorieDao {
     // 3) On renvoie cet id à l'appelant (écran ou test).
     return id;
   }
+
+  // ---------------------------------------------------------------------------
+  // READ – Q5.2
+  // ---------------------------------------------------------------------------
+  /// Toutes les catégories, triées par nom.
+  Future<List<Categorie>> lireCategories() async {
+    final db = await DatabaseHelper().database;
+    final lignes = await db.query(table, orderBy: 'nom ASC');
+    return lignes.map((ligne) => Categorie.fromMap(ligne)).toList();
+  }
+
+  // READ – Q5.10
+  /// Une seule catégorie par son id, ou null si elle n'existe pas.
+  Future<Categorie?> lireCategorieParId(int id) async {
+    final db = await DatabaseHelper().database;
+    final lignes = await db.query(
+      table,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return lignes.isEmpty ? null : Categorie.fromMap(lignes.first);
+  }
 }

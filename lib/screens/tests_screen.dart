@@ -6,6 +6,7 @@ import '../database/database_helper.dart';
 import '../database/produit_dao.dart';
 import '../models/categorie.dart';
 import '../models/produit.dart';
+import 'produits_screen.dart';
 
 /// Banc d'essai : un bouton par méthode à tester (parties 03 et 04).
 /// Les résultats s'affichent dans la console (terminal / Debug Console).
@@ -153,6 +154,67 @@ class TestsScreen extends StatelessWidget {
               }
             },
             child: const Text('Test : produit avec prix -2'),
+          ),
+
+          // ------------------------------------------------------------------
+          // Partie 05 – Read
+          // ------------------------------------------------------------------
+          const _Titre('Partie 05 – Lecture'),
+
+          // Q5.3 a) et b) – Résultat brut de db.query, puis tentative de modif
+          ElevatedButton(
+            onPressed: () async {
+              final db = await DatabaseHelper().database;
+              final lignes = await db.query('produits');
+              debugPrint('Type du résultat : ${lignes.runtimeType}');
+              debugPrint('Résultat brut : ${lignes.toString()}');
+              if (lignes.isEmpty) {
+                debugPrint('Aucun produit : cliquez d\'abord sur « ajouter un produit »');
+                return;
+              }
+              try {
+                lignes.first['nom'] = 'Test'; // Q5.3 b)
+                debugPrint('Modification acceptée ?!');
+              } catch (e) {
+                debugPrint('Erreur en modifiant la Map : $e');
+              }
+            },
+            child: const Text('Test : lire les produits (brut)'),
+          ),
+
+          // Q5.3 c) – Avec conversion en objets Produit
+          ElevatedButton(
+            onPressed: () async {
+              final produits = await ProduitDao().lireProduits();
+              debugPrint('${produits.length} produit(s) :');
+              for (final p in produits) {
+                debugPrint(p.toString());
+              }
+            },
+            child: const Text('Test : lire les produits (objets)'),
+          ),
+
+          // Q5.4 – Lecture par id (existant puis inexistant)
+          ElevatedButton(
+            onPressed: () async {
+              final p1 = await ProduitDao().lireProduitParId(1);
+              final p999 = await ProduitDao().lireProduitParId(999);
+              debugPrint('lireProduitParId(1)   : $p1');
+              debugPrint('lireProduitParId(999) : $p999');
+            },
+            child: const Text('Test : lire le produit 1 et 999'),
+          ),
+
+          // Q5.8 – Ouvrir la vraie liste des produits
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProduitsScreen()),
+              );
+            },
+            icon: const Icon(Icons.list),
+            label: const Text('Ouvrir la liste des produits'),
           ),
         ],
       ),
