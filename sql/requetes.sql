@@ -86,3 +86,16 @@ VALUES ('Test catégorie', 1, 1, '2026-10-05T08:00:00', 99);
 
 -- c) supprimer une catégorie qui contient des produits  -> FOREIGN KEY constraint failed
 DELETE FROM categories WHERE id = 1;
+
+-- -------------------------------------------------------------
+-- Partie 04 – Insertion (Create)
+-- Exécuter, vérifier, puis « Annuler les modifications »
+-- -------------------------------------------------------------
+
+-- Q4.1 – Insérer la catégorie « Électroménager »
+INSERT INTO categories (nom, description)
+VALUES ('Électroménager', 'Petits appareils');
+
+-- Q4.6 – Insérer le produit « Stylo bleu » (Papeterie = catégorie 4)
+INSERT INTO produits (nom, prix, quantite, disponible, date_ajout, categorie_id)
+VALUES ('Stylo bleu', 0.500, 100, 1, '2026-10-30T10:00:00', 4);

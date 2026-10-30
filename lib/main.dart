@@ -3,18 +3,23 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'screens/tests_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Windows / Linux : SQLite passe par FFI (Q2.2).
-  // Sur Android / iOS, sqflite fonctionne directement : rien à faire.
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+  if (kIsWeb) {
+    // Web (Chrome) : SQLite tourne dans le navigateur (WebAssembly).
+    // La base est stockée dans le navigateur (IndexedDB), pas dans un fichier.
+    databaseFactory = databaseFactoryFfiWeb;
+  } else if (Platform.isWindows || Platform.isLinux) {
+    // Windows / Linux : SQLite passe par FFI (Q2.2).
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+  // Android / iOS : sqflite fonctionne directement, rien à faire.
 
   runApp(const StockFacileApp());
 }

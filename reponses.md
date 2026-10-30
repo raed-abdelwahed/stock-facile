@@ -1,5 +1,8 @@
 # Réponses – TP StockFacile
 
+> **Environnement de test.** Visual Studio « Développement Desktop en C++ » n'étant pas installé sur mon PC (`flutter doctor` : *Unable to find suitable Visual Studio toolchain*), l'application est testée dans **Chrome** avec le package `sqflite_common_ffi_web` (ajouté dans `main.dart` avec `if (kIsWeb) databaseFactory = databaseFactoryFfiWeb;`). Le code du TP pour Windows / Android est conservé tel quel.
+> Conséquences : la base s'appelle bien `stock_facile.db`, mais elle est stockée **dans le navigateur** (IndexedDB, chemin affiché : `/stock_facile.db`) et non dans un fichier ; elle ne peut donc pas être ouverte dans DB Browser. Les vérifications « DB Browser » des parties 03 et 04 sont faites dans les outils de Chrome (F12 → Application → IndexedDB) et dans la console. Les requêtes SQL, elles, ont été testées dans DB Browser sur `sql/brouillon.db`.
+
 ## Partie 00
 
 ### Q0.5 – Pourquoi ne pas envoyer les fichiers `.db` sur GitHub ?
@@ -80,7 +83,7 @@ Les conversions faites :
 - **(4) Combien de fois `onCreate` est-il appelé ?** **Une seule fois** dans toute la vie de l'application : au tout premier lancement, quand le fichier `stock_facile.db` n'existe pas encore. Il sera rappelé seulement si on supprime le fichier (désinstallation ou réinitialisation de la base).
 
 ### Q3.4 – Console au premier clic sur « Ouvrir la base »
-- Chemin de la base : affiché par `debugPrint('Base SQLite : …')`. Sous Windows (sqflite_common_ffi), le fichier est créé dans le dossier du projet : `…\stock_facile\.dart_tool\sqflite_common_ffi\databases\stock_facile.db`.
+- Chemin de la base : affiché par `debugPrint('Base SQLite : …')`. Dans Chrome : `/stock_facile.db` (stockée dans IndexedDB du navigateur). Sous Windows (sqflite_common_ffi), le fichier serait créé dans `…\stock_facile\.dart_tool\sqflite_common_ffi\databases\stock_facile.db`.
 - Messages : `onCreate : création des tables (version 1)` puis `Nombre de catégories : 4`.
 
 ### Q3.5 – Après redémarrage, le message `onCreate` s'affiche-t-il encore ?
@@ -90,3 +93,40 @@ Non. Au deuxième lancement, le fichier `stock_facile.db` existe déjà avec la 
 - Onglet **Structure** : les tables `categories` et `produits` existent avec les mêmes colonnes que dans `brouillon.db`.
 - Onglet **Parcourir les données** : `categories` contient les 4 catégories de départ, `produits` est vide.
 - Onglet **Éditer les pragmas** : *User Version* = **1**. Cette valeur correspond à la ligne `static const int versionBase = 1;` de `database_helper.dart`, transmise à `openDatabase(version: versionBase)` : sqflite l'enregistre dans le fichier pour savoir s'il doit appeler `onCreate`, `onUpgrade` ou rien.
+
+## Partie 04 – Opération 1 : insérer des données (Create)
+
+### Q4.2 – Explication des trois lignes de `insererCategorie`
+1. `final Database db = await DatabaseHelper().database;` : récupère la connexion **unique** à la base (singleton). La base est ouverte au premier appel puis réutilisée.
+2. `final int id = await db.insert(table, categorie.toMap());` : `toMap()` transforme l'objet en `Map` `{colonne: valeur}` ; `insert` construit la requête `INSERT INTO categories (nom, description) VALUES (?, ?)` avec des paramètres, l'exécute et renvoie l'`id` généré.
+3. `return id;` : renvoie cet `id` à l'appelant (le bouton de test, plus tard l'écran).
+
+### Q4.3 – `id` obtenu au premier clic
+On obtient **`id = 5`**. La table contient déjà les 4 catégories de départ (id 1 à 4) insérées par `onCreate` ; `AUTOINCREMENT` donne donc le numéro suivant.
+
+### Q4.4 – Deuxième clic sur le même bouton
+Message d'erreur :
+`DatabaseException(UNIQUE constraint failed: categories.nom (code 2067 SQLITE_CONSTRAINT_UNIQUE))`
+La contrainte en cause est **`UNIQUE` sur la colonne `nom`** (partie 01) : il ne peut pas y avoir deux catégories « Électroménager ». L'erreur est interceptée avec `on DatabaseException catch (e)` et `e.isUniqueConstraintError()`, et un `SnackBar` « Cette catégorie existe déjà » s'affiche.
+
+### Q4.9 – Stockage de `disponible` et `date_ajout`
+- `disponible` est stocké en **`1`** (entier) et non `true` ;
+- `date_ajout` est stockée en **texte ISO 8601**, par exemple `2026-10-30T15:42:10.123456`.
+C'est conforme à `toMap()` : `disponible ? 1 : 0` et `dateAjout.toIso8601String()`.
+
+### Q4.10 – Produit avec `categorieId: 99`
+- Avec les clés étrangères activées : `DatabaseException(FOREIGN KEY constraint failed (code 787 SQLITE_CONSTRAINT_FOREIGNKEY))`. L'insertion est refusée.
+- En commentant `PRAGMA foreign_keys = ON` : l'insertion **réussit**, un produit « orphelin » est créé alors que la catégorie 99 n'existe pas. SQLite ne vérifie pas les clés étrangères par défaut.
+- Un *hot reload* ne suffit pas : `onConfigure` ne s'exécute qu'à l'**ouverture** de la base, et la connexion déjà ouverte est gardée en mémoire par le singleton (`_db`). Il faut redémarrer complètement l'application pour que la base soit rouverte avec le nouveau réglage.
+
+### Q4.11 – Produit avec un prix de `-2`
+L'insertion est bloquée par la contrainte **`CHECK (prix >= 0)`** : `CHECK constraint failed: prix >= 0`.
+Il faut quand même vérifier le prix dans le formulaire Flutter (partie 06) parce que :
+- l'utilisateur reçoit un message clair tout de suite, sous le champ, au lieu d'une erreur technique SQLite ;
+- on évite un aller-retour inutile vers la base ;
+- la contrainte de la base reste une **dernière sécurité**, si une erreur passe à travers l'interface.
+
+### Question de réflexion – `conflictAlgorithm`
+- `ConflictAlgorithm.ignore` : si l'insertion viole une contrainte (`UNIQUE`, clé primaire…), la ligne est **simplement ignorée**, sans erreur ; `insert` renvoie alors 0 (aucune ligne insérée).
+- `ConflictAlgorithm.replace` : en cas de conflit, SQLite **supprime l'ancienne ligne** puis insère la nouvelle à sa place.
+- `replace` est dangereux sur une table référencée par une clé étrangère : remplacer une catégorie revient à la **supprimer** puis à la recréer. Avec `ON DELETE RESTRICT`, la suppression est refusée si des produits y sont rattachés (erreur) ; avec `ON DELETE CASCADE`, tous les produits de la catégorie seraient **supprimés** ; et la nouvelle ligne peut recevoir un nouvel `id`, ce qui casse les liens avec les produits.
