@@ -1,5 +1,5 @@
 name: stock_facile
-description: "A new Flutter project."
+description: "StockFacile – gestion de stock avec SQLite (TP Flutter)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,6 +34,11 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+
+  # Partie 02 – base de données SQLite
+  sqflite: ^2.4.2             # exécuter des requêtes SQLite depuis Dart
+  path: ^1.9.1                # construire le chemin du fichier .db
+  sqflite_common_ffi: ^2.3.6  # SQLite sur Windows / Linux (desktop)
 
 dev_dependencies:
   flutter_test:

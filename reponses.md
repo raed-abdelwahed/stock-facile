@@ -46,3 +46,27 @@ Le fichier contient uniquement la **structure** de la base : les deux instructio
 
 ### Q1.8 – Pourquoi fermer la base dans DB Browser ?
 Quand DB Browser a la base ouverte, il peut garder un **verrou** sur le fichier ou des modifications pas encore écrites. Si un autre programme (notre application) écrit en même temps dans le même fichier, on risque une erreur « database is locked », des données perdues ou un fichier corrompu. Fermer la base garantit qu'un seul programme utilise le fichier à la fois.
+
+## Partie 02 – Packages et classes modèles
+
+### Q2.1 – Rôle de chaque package
+| Package | Rôle |
+|---|---|
+| `sqflite` | Plugin qui permet d'ouvrir une base SQLite et d'exécuter des requêtes (`insert`, `query`, `update`, `delete`, `rawQuery`…) depuis Dart. |
+| `path` | Construit des chemins de fichiers corrects quel que soit le système (`join(dossier, 'stock_facile.db')`), sans se soucier des `/` ou `\`. |
+| `sqflite_common_ffi` | Version de sqflite pour le **desktop** (Windows / Linux) : elle utilise la bibliothèque SQLite native via FFI, car le plugin `sqflite` classique ne fonctionne que sur Android, iOS et macOS. |
+
+### Q2.3 – Classe `Categorie`
+- **Pourquoi `id` est-il `int?` ?** Tant qu'une catégorie n'est pas enregistrée, elle n'a pas encore d'identifiant : c'est SQLite qui le génère (`AUTOINCREMENT`) au moment de l'`INSERT`. Un objet créé dans l'application (`Categorie(nom: 'Électroménager')`) a donc un `id` à `null`.
+- **Pourquoi `toMap()` n'ajoute-t-il `id` que s'il n'est pas `null` ?** Si on envoyait `'id': null` dans un `INSERT`, on demanderait explicitement un `id` vide. En n'ajoutant pas la clé, on laisse SQLite choisir lui-même le prochain `id`. Quand l'objet vient de la base (il a un `id`), la clé est présente : c'est utile pour un `UPDATE`.
+
+### Q2.4 – Méthode `toMap()` de `Produit`
+Les conversions faites :
+- `bool disponible` → `1` ou `0` (`disponible ? 1 : 0`) ;
+- `DateTime dateAjout` → texte ISO 8601 (`toIso8601String()`) ;
+- `double prix` → envoyé tel quel (colonne `REAL`) ;
+- `categorieId` → clé `'categorie_id'` : les clés de la `Map` doivent être **exactement** les noms des colonnes, sinon on obtient `table produits has no column named categorieId`.
+
+### Questions de réflexion (Partie 02)
+- **Pourquoi un constructeur `factory` pour `fromMap` ?** Un constructeur `factory` peut exécuter du code avant de créer l'objet (lire la `Map`, convertir les types : `1/0` → `bool`, texte → `DateTime`) puis retourner l'objet construit avec le constructeur normal. Il donne aussi un nom clair à cette façon de construire l'objet (`Produit.fromMap(ligne)`).
+- **Pourquoi `(map['prix'] as num).toDouble()` et pas `map['prix'] as double` ?** SQLite peut renvoyer un nombre entier quand la valeur n'a pas de décimales : un prix de `5` revient en `int`, pas en `double`. `map['prix'] as double` provoquerait alors l'erreur `type 'int' is not a subtype of type 'double'`. `num` accepte les deux (`int` et `double`), et `.toDouble()` convertit dans tous les cas.
